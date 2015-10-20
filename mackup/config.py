@@ -2,18 +2,23 @@
 
 import os
 import os.path
+import sys
 
 from .constants import (MACKUP_BACKUP_PATH,
                         MACKUP_CONFIG_FILE,
                         ENGINE_DROPBOX,
                         ENGINE_GDRIVE,
                         ENGINE_COPY,
+                        ENGINE_ICLOUD,
+                        ENGINE_BOX,
                         ENGINE_FS)
 
 from .utils import (error,
                     get_dropbox_folder_location,
                     get_copy_folder_location,
-                    get_google_drive_folder_location)
+                    get_google_drive_folder_location,
+                    get_icloud_folder_location,
+                    get_box_folder_location)
 try:
     import configparser
 except ImportError:
@@ -60,7 +65,8 @@ class Config(object):
         """
         The engine used by the storage.
 
-        ENGINE_DROPBOX, ENGINE_GDRIVE, ENGINE_COPY or ENGINE_FS.
+        ENGINE_DROPBOX, ENGINE_GDRIVE, ENGINE_COPY, ENGINE_ICLOUD, ENGINE_BOX
+        or ENGINE_FS.
 
         Returns:
             str
@@ -180,6 +186,8 @@ class Config(object):
         if engine not in [ENGINE_DROPBOX,
                           ENGINE_GDRIVE,
                           ENGINE_COPY,
+                          ENGINE_ICLOUD,
+                          ENGINE_BOX,
                           ENGINE_FS]:
             raise ConfigError('Unknown storage engine: {}'.format(engine))
 
@@ -198,6 +206,10 @@ class Config(object):
             path = get_google_drive_folder_location()
         elif self.engine == ENGINE_COPY:
             path = get_copy_folder_location()
+        elif self.engine == ENGINE_ICLOUD:
+            path = get_icloud_folder_location()
+        elif self.engine == ENGINE_BOX:
+            path = get_box_folder_location()
         elif self.engine == ENGINE_FS:
             if self._parser.has_option('storage', 'path'):
                 cfg_path = self._parser.get('storage', 'path')
@@ -206,7 +218,13 @@ class Config(object):
                 raise ConfigError("The required 'path' can't be found while"
                                   " the 'file_system' engine is used.")
 
-        return str(path)
+        # Python 2 and python 3 byte strings are different.
+        if sys.version_info[0] < 3:
+            path = str(path)
+        else:
+            path = path.decode("utf-8")
+
+        return path
 
     def _parse_directory(self):
         """
